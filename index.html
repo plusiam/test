@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마음일기 - 나의 감정 기록장</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #a78bfa;
+            --secondary-color: #fbbf24;
+            --bg-light: #faf5ff;
+            --bg-dark: #1f2937;
+        }
+        
+        .dark {
+            --bg-light: #1f2937;
+            --text-color: #f3f4f6;
+        }
+        
+        .emotion-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .emotion-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .emotion-btn.selected {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(167, 139, 250, 0.5);
+        }
+        
+        .calendar-day {
+            min-height: 80px;
+            transition: all 0.2s ease;
+        }
+        
+        .calendar-day:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        @media (max-width: 640px) {
+            .calendar-day {
+                min-height: 60px;
+                font-size: 0.875rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-purple-50 min-h-screen">
+    <!-- 비밀번호 입력 모달 -->
+    <div id="passwordModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 class="text-xl font-semibold mb-4">비밀번호 입력</h3>
+            <input type="password" id="passwordInput" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400" placeholder="비밀번호를 입력하세요">
+            <div class="mt-4 flex gap-2">
+                <button onclick="checkPassword()" class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600">확인</button>
+                <button onclick="skipPassword()" class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">건너뛰기</button>
+            </div>
+            <p class="text-sm text-gray-500 mt-2">처음 방문이시면 새 비밀번호를 설정하세요</p>
+        </div>
+    </div>
+
+    <!-- 메인 컨테이너 -->
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- 헤더 -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-purple-800 mb-2">마음일기 📖</h1>
+            <p class="text-gray-600">오늘의 감정을 기록하고, 나의 마음을 들여다보세요</p>
+            <div class="mt-4 flex justify-center gap-4">
+                <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+                    🌙 다크모드
+                </button>
+                <button onclick="showSettings()" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+                    ⚙️ 설정
+                </button>
+            </div>
+        </header>
+
+        <!-- 탭 메뉴 -->
+        <div class="flex flex-wrap justify-center gap-2 mb-8">
+            <button onclick="showTab('write')" class="tab-btn px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600">
+                ✍️ 일기 쓰기
+            </button>
+            <button onclick="showTab('calendar')" class="tab-btn px-6 py-3 bg-white rounded-lg hover:bg-gray-100">
+                📅 감정 달력
+            </button>
+            <button onclick="showTab('stats')" class="tab-btn px-6 py-3 bg-white rounded-lg hover:bg-gray-100">
+                📊 통계 보기
+            </button>
+            <button onclick="showTab('list')" class="tab-btn px-6 py-3 bg-white rounded-lg hover:bg-gray-100">
+                📋 일기 목록
+            </button>
+        </div>
+
+        <!-- 일기 쓰기 탭 -->
+        <div id="writeTab" class="tab-content bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-semibold mb-6 text-center">오늘의 마음은 어떤가요?</h2>
+            
+            <!-- 감정 선택 -->
+            <div class="mb-6">
+                <p class="text-lg mb-4 text-center">오늘의 감정을 선택해주세요</p>
+                <div class="grid grid-cols-3 sm:grid-cols-6 gap-4 max-w-2xl mx-auto">
+                    <button onclick="selectEmotion('happy', '😊')" class="emotion-btn p-4 bg-yellow-100 rounded-lg hover:bg-yellow-200">
+                        <span class="text-4xl">😊</span>
+                        <p class="text-sm mt-1">행복</p>
+                    </button>
+                    <button onclick="selectEmotion('sad', '😢')" class="emotion-btn p-4 bg-blue-100 rounded-lg hover:bg-blue-200">
+                        <span class="text-4xl">😢</span>
+                        <p class="text-sm mt-1">슬픔</p>
+                    </button>
+                    <button onclick="selectEmotion('angry', '😡')" class="emotion-btn p-4 bg-red-100 rounded-lg hover:bg-red-200">
+                        <span class="text-4xl">😡</span>
+                        <p class="text-sm mt-1">화남</p>
+                    </button>
+                    <button onclick="selectEmotion('anxious', '😰')" class="emotion-btn p-4 bg-purple-100 rounded-lg hover:bg-purple-200">
+                        <span class="text-4xl">😰</span>
+                        <p class="text-sm mt-1">불안</p>
+                    </button>
+                    <button onclick="selectEmotion('peaceful', '😌')" class="emotion-btn p-4 bg-green-100 rounded-lg hover:bg-green-200">
+                        <span class="text-4xl">😌</span>
+                        <p class="text-sm mt-1">평온</p>
+                    </button>
+                    <button onclick="selectEmotion('excited', '🤗')" class="emotion-btn p-4 bg-orange-100 rounded-lg hover:bg-orange-200">
+                        <span class="text-4xl">🤗</span>
+                        <p class="text-sm mt-1">설렘</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 날짜 선택 -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">날짜</label>
+                <input type="date" id="diaryDate" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400">
+            </div>
+
+            <!-- 일기 내용 -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">오늘의 일기</label>
+                <textarea id="diaryContent" rows="6" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400" 
+                    placeholder="오늘 하루는 어떠셨나요? 마음속 이야기를 편하게 적어주세요..."></textarea>
+            </div>
+
+            <!-- 감사한 일 -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">오늘 감사한 일 3가지</label>
+                <div class="space-y-2">
+                    <input type="text" id="grateful1" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400" 
+                        placeholder="1. 첫 번째 감사한 일">
+                    <input type="text" id="grateful2" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400" 
+                        placeholder="2. 두 번째 감사한 일">
+                    <input type="text" id="grateful3" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400" 
+                        placeholder="3. 세 번째 감사한 일">
+                </div>
+            </div>
+
+            <!-- 추가 정보 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">오늘의 날씨</label>
+                    <select id="weather" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400">
+                        <option value="">선택하세요</option>
+                        <option value="sunny">☀️ 맑음</option>
+                        <option value="cloudy">☁️ 흐림</option>
+                        <option value="rainy">🌧️ 비</option>
+                        <option value="snowy">❄️ 눈</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">함께한 사람</label>
+                    <input type="text" id="withPerson" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400" 
+                        placeholder="예: 가족, 친구, 혼자">
+                </div>
+            </div>
+
+            <!-- 저장 버튼 -->
+            <div class="text-center">
+                <button onclick="saveDiary()" class="px-8 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 text-lg font-medium">
+                    💾 일기 저장하기
+                </button>
+            </div>
+        </div>
+
+        <!-- 감정 달력 탭 -->
+        <div id="calendarTab" class="tab-content hidden bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-semibold mb-6 text-center">감정 달력</h2>
+            <div class="mb-4 flex justify-center gap-4">
+                <button onclick="changeMonth(-1)" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">◀</button>
+                <h3 id="currentMonth" class="text-xl font-medium flex items-center"></h3>
+                <button onclick="changeMonth(1)" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">▶</button>
+            </div>
+            <div id="calendar" class="grid grid-cols-7 gap-2"></div>
+            
+            <!-- 감정 범례 -->
+            <div class="mt-6 flex flex-wrap justify-center gap-2">
+                <div class="flex items-center gap-1"><span class="w-4 h-4 bg-yellow-200 rounded"></span> 행복</div>
+                <div class="flex items-center gap-1"><span class="w-4 h-4 bg-blue-200 rounded"></span> 슬픔</div>
+                <div class="flex items-center gap-1"><span class="w-4 h-4 bg-red-200 rounded"></span> 화남</div>
+                <div class="flex items-center gap-1"><span class="w-4 h-4 bg-purple-200 rounded"></span> 불안</div>
+                <div class="flex items-center gap-1"><span class="w-4 h-4 bg-green-200 rounded"></span> 평온</div>
+                <div class="flex items-center gap-1"><span class="w-4 h-4 bg-orange-200 rounded"></span> 설렘</div>
+            </div>
+        </div>
+
+        <!-- 통계 탭 -->
+        <div id="statsTab" class="tab-content hidden bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-semibold mb-6 text-center">감정 통계</h2>
+            <div class="max-w-md mx-auto">
+                <canvas id="emotionChart"></canvas>
+            </div>
+            <div id="statsDetails" class="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- 일기 목록 탭 -->
+        <div id="listTab" class="tab-content hidden bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-semibold mb-6 text-center">일기 목록</h2>
+            
+            <!-- 검색 및 필터 -->
+            <div class="mb-6 space-y-4">
+                <input type="text" id="searchInput" onkeyup="searchDiaries()" 
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400" 
+                    placeholder="일기 내용 검색...">
+                <div class="flex flex-wrap gap-2">
+                    <input type="date" id="filterStartDate" onchange="filterDiaries()" 
+                        class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    <span class="flex items-center">~</span>
+                    <input type="date" id="filterEndDate" onchange="filterDiaries()" 
+                        class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    <select id="filterEmotion" onchange="filterDiaries()" 
+                        class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400">
+                        <option value="">모든 감정</option>
+                        <option value="happy">😊 행복</option>
+                        <option value="sad">😢 슬픔</option>
+                        <option value="angry">😡 화남</option>
+                        <option value="anxious">😰 불안</option>
+                        <option value="peaceful">😌 평온</option>
+                        <option value="excited">🤗 설렘</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="diaryList" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let currentEmotion = '';
+        let currentEmoji = '';
+        let diaries = [];
+        let currentDate = new Date();
+        let hasPassword = false;
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            // 오늘 날짜 설정
+            document.getElementById('diaryDate').value = new Date().toISOString().split('T')[0];
+            
+            // 저장된 데이터 불러오기
+            loadDiaries();
+            
+            // 비밀번호 체크
+            checkPasswordProtection();
+            
+            // 달력 초기화
+            renderCalendar();
+        });
+
+        // 비밀번호 보호 확인
+        function checkPasswordProtection() {
+            const savedPassword = localStorage.getItem('diaryPassword');
+            if (savedPassword) {
+                hasPassword = true;
+                document.getElementById('passwordModal').classList.remove('hidden');
+            }
+        }
+
+        // 비밀번호 확인
+        function checkPassword() {
+            const input = document.getElementById('passwordInput').value;
+            const savedPassword = localStorage.getItem('diaryPassword');
+            
+            if (!savedPassword) {
+                // 첫 비밀번호 설정
+                localStorage.setItem('diaryPassword', btoa(input));
+                alert('비밀번호가 설정되었습니다!');
+                document.getElementById('passwordModal').classList.add('hidden');
+            } else if (btoa(input) === savedPassword) {
+                document.getElementById('passwordModal').classList.add('hidden');
+            } else {
+                alert('비밀번호가 틀렸습니다.');
+            }
+        }
+
+        // 비밀번호 건너뛰기
+        function skipPassword() {
+            document.getElementById('passwordModal').classList.add('hidden');
+        }
+
+        // 감정 선택
+        function selectEmotion(emotion, emoji) {
+            currentEmotion = emotion;
+            currentEmoji = emoji;
+            
+            // 모든 버튼 선택 해제
+            document.querySelectorAll('.emotion-btn').forEach(btn => {
+                btn.classList.remove('selected', 'ring-4', 'ring-purple-400');
+            });
+            
+            // 선택된 버튼 표시
+            event.target.closest('.emotion-btn').classList.add('selected', 'ring-4', 'ring-purple-400');
+        }
+
+        // 탭 전환
+        function showTab(tabName) {
+            // 모든 탭 숨기기
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // 모든 탭 버튼 스타일 초기화
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-purple-500', 'text-white');
+                btn.classList.add('bg-white');
+            });
+            
+            // 선택된 탭 표시
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            event.target.classList.remove('bg-white');
+            event.target.classList.add('bg-purple-500', 'text-white');
+            
+            // 탭별 초기화
+            if (tabName === 'calendar') {
+                renderCalendar();
+            } else if (tabName === 'stats') {
+                showStats();
+            } else if (tabName === 'list') {
+                showDiaryList();
+            }
+        }
+
+        // 일기 저장
+        function saveDiary() {
+            if (!currentEmotion) {
+                alert('감정을 선택해주세요!');
+                return;
+            }
+            
+            const diary = {
+                id: Date.now(),
+                date: document.getElementById('diaryDate').value,
+                emotion: currentEmotion,
+                emoji: currentEmoji,
+                content: document.getElementById('diaryContent').value,
+                grateful: [
+                    document.getElementById('grateful1').value,
+                    document.getElementById('grateful2').value,
+                    document.getElementById('grateful3').value
+                ].filter(item => item.trim() !== ''),
+                weather: document.getElementById('weather').value,
+                withPerson: document.getElementById('withPerson').value
+            };
+            
+            // 기존 일기 확인 (같은 날짜)
+            const existingIndex = diaries.findIndex(d => d.date === diary.date);
+            if (existingIndex !== -1) {
+                if (confirm('이미 이 날짜에 일기가 있습니다. 덮어쓰시겠습니까?')) {
+                    diaries[existingIndex] = diary;
+                } else {
+                    return;
+                }
+            } else {
+                diaries.push(diary);
+            }
+            
+            // 로컬 스토리지에 저장
+            localStorage.setItem('moodDiaries', JSON.stringify(diaries));
+            
+            alert('일기가 저장되었습니다! 💜');
+            
+            // 폼 초기화
+            resetForm();
+        }
+
+        // 폼 초기화
+        function resetForm() {
+            currentEmotion = '';
+            currentEmoji = '';
+            document.getElementById('diaryContent').value = '';
+            document.getElementById('grateful1').value = '';
+            document.getElementById('grateful2').value = '';
+            document.getElementById('grateful3').value = '';
+            document.getElementById('weather').value = '';
+            document.getElementById('withPerson').value = '';
+            document.querySelectorAll('.emotion-btn').forEach(btn => {
+                btn.classList.remove('selected', 'ring-4', 'ring-purple-400');
+            });
+        }
+
+        // 일기 불러오기
+        function loadDiaries() {
+            const saved = localStorage.getItem('moodDiaries');
+            if (saved) {
+                diaries = JSON.parse(saved);
+            }
+        }
+
+        // 달력 렌더링
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            document.getElementById('currentMonth').textContent = `${year}년 ${month + 1}월`;
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+            
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = '';
+            
+            // 요일 헤더
+            const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+            weekdays.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'text-center font-semibold text-gray-600 p-2';
+                dayHeader.textContent = day;
+                calendar.appendChild(dayHeader);
+            });
+            
+            // 빈 칸 채우기
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDiv = document.createElement('div');
+                calendar.appendChild(emptyDiv);
+            }
+            
+            // 날짜 채우기
+            for (let date = 1; date <= lastDate; date++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+                const dayDiary = diaries.find(d => d.date === dateStr);
+                
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day border rounded-lg p-2 cursor-pointer relative';
+                
+                if (dayDiary) {
+                    const emotionColors = {
+                        happy: 'bg-yellow-200',
+                        sad: 'bg-blue-200',
+                        angry: 'bg-red-200',
+                        anxious: 'bg-purple-200',
+                        peaceful: 'bg-green-200',
+                        excited: 'bg-orange-200'
+                    };
+                    dayDiv.classList.add(emotionColors[dayDiary.emotion]);
+                    dayDiv.innerHTML = `
+                        <div class="font-semibold">${date}</div>
+                        <div class="text-2xl">${dayDiary.emoji}</div>
+                    `;
+                    dayDiv.onclick = () => viewDiary(dayDiary);
+                } else {
+                    dayDiv.classList.add('bg-gray-50');
+                    dayDiv.innerHTML = `<div class="text-gray-500">${date}</div>`;
+                }
+                
+                calendar.appendChild(dayDiv);
+            }
+        }
+
+        // 월 변경
+        function changeMonth(direction) {
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            renderCalendar();
+        }
+
+        // 통계 표시
+        function showStats() {
+            const emotionCounts = {
+                happy: 0,
+                sad: 0,
+                angry: 0,
+                anxious: 0,
+                peaceful: 0,
+                excited: 0
+            };
+            
+            diaries.forEach(diary => {
+                emotionCounts[diary.emotion]++;
+            });
+            
+            // 차트 그리기
+            const ctx = document.getElementById('emotionChart').getContext('2d');
+            
+            // 기존 차트 제거
+            if (window.emotionChart) {
+                window.emotionChart.destroy();
+            }
+            
+            window.emotionChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['행복 😊', '슬픔 😢', '화남 😡', '불안 😰', '평온 😌', '설렘 🤗'],
+                    datasets: [{
+                        data: Object.values(emotionCounts),
+                        backgroundColor: [
+                            '#fde047',
+                            '#93c5fd',
+                            '#fca5a5',
+                            '#d8b4fe',
+                            '#86efac',
+                            '#fdba74'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+            
+            // 상세 통계
+            const statsDetails = document.getElementById('statsDetails');
+            statsDetails.innerHTML = '';
+            
+            const emotionNames = {
+                happy: '행복 😊',
+                sad: '슬픔 😢',
+                angry: '화남 😡',
+                anxious: '불안 😰',
+                peaceful: '평온 😌',
+                excited: '설렘 🤗'
+            };
+            
+            Object.entries(emotionCounts).forEach(([emotion, count]) => {
+                if (count > 0) {
+                    const statDiv = document.createElement('div');
+                    statDiv.className = 'text-center p-4 bg-gray-50 rounded-lg';
+                    statDiv.innerHTML = `
+                        <div class="text-2xl mb-2">${emotionNames[emotion]}</div>
+                        <div class="text-3xl font-bold text-purple-600">${count}</div>
+                        <div class="text-sm text-gray-500">일</div>
+                    `;
+                    statsDetails.appendChild(statDiv);
+                }
+            });
+        }
+
+        // 일기 목록 표시
+        function showDiaryList() {
+            const diaryList = document.getElementById('diaryList');
+            diaryList.innerHTML = '';
+            
+            const sortedDiaries = [...diaries].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            sortedDiaries.forEach(diary => {
+                const diaryCard = document.createElement('div');
+                diaryCard.className = 'bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100';
+                diaryCard.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="text-2xl">${diary.emoji}</span>
+                            <span class="font-semibold">${diary.date}</span>
+                            ${diary.weather ? `<span class="text-sm text-gray-500 ml-2">${diary.weather}</span>` : ''}
+                        </div>
+                        <button onclick="deleteDiary(${diary.id})" class="text-red-500 hover:text-red-700">🗑️</button>
+                    </div>
+                    <p class="text-gray-700 line-clamp-2">${diary.content}</p>
+                    ${diary.grateful.length > 0 ? `<p class="text-sm text-purple-600 mt-2">감사: ${diary.grateful.join(', ')}</p>` : ''}
+                `;
+                diaryCard.onclick = (e) => {
+                    if (!e.target.closest('button')) {
+                        viewDiary(diary);
+                    }
+                };
+                diaryList.appendChild(diaryCard);
+            });
+        }
+
+        // 일기 보기
+        function viewDiary(diary) {
+            // 일기 쓰기 탭으로 전환
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            document.getElementById('writeTab').classList.remove('hidden');
+            
+            // 데이터 채우기
+            document.getElementById('diaryDate').value = diary.date;
+            document.getElementById('diaryContent').value = diary.content;
+            if (diary.grateful[0]) document.getElementById('grateful1').value = diary.grateful[0];
+            if (diary.grateful[1]) document.getElementById('grateful2').value = diary.grateful[1];
+            if (diary.grateful[2]) document.getElementById('grateful3').value = diary.grateful[2];
+            document.getElementById('weather').value = diary.weather || '';
+            document.getElementById('withPerson').value = diary.withPerson || '';
+            
+            // 감정 선택
+            currentEmotion = diary.emotion;
+            currentEmoji = diary.emoji;
+            
+            // 스크롤 맨 위로
+            window.scrollTo(0, 0);
+        }
+
+        // 일기 삭제
+        function deleteDiary(id) {
+            if (confirm('이 일기를 삭제하시겠습니까?')) {
+                diaries = diaries.filter(d => d.id !== id);
+                localStorage.setItem('moodDiaries', JSON.stringify(diaries));
+                showDiaryList();
+            }
+        }
+
+        // 검색 기능
+        function searchDiaries() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            filterDiaries();
+        }
+
+        // 필터링 기능
+        function filterDiaries() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const startDate = document.getElementById('filterStartDate').value;
+            const endDate = document.getElementById('filterEndDate').value;
+            const emotionFilter = document.getElementById('filterEmotion').value;
+            
+            let filtered = diaries;
+            
+            // 검색어 필터
+            if (searchTerm) {
+                filtered = filtered.filter(diary => 
+                    diary.content.toLowerCase().includes(searchTerm) ||
+                    diary.grateful.some(g => g.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            // 날짜 필터
+            if (startDate) {
+                filtered = filtered.filter(diary => diary.date >= startDate);
+            }
+            if (endDate) {
+                filtered = filtered.filter(diary => diary.date <= endDate);
+            }
+            
+            // 감정 필터
+            if (emotionFilter) {
+                filtered = filtered.filter(diary => diary.emotion === emotionFilter);
+            }
+            
+            // 결과 표시
+            const diaryList = document.getElementById('diaryList');
+            diaryList.innerHTML = '';
+            
+            const sortedFiltered = filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            sortedFiltered.forEach(diary => {
+                const diaryCard = document.createElement('div');
+                diaryCard.className = 'bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100';
+                diaryCard.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="text-2xl">${diary.emoji}</span>
+                            <span class="font-semibold">${diary.date}</span>
+                        </div>
+                        <button onclick="deleteDiary(${diary.id})" class="text-red-500 hover:text-red-700">🗑️</button>
+                    </div>
+                    <p class="text-gray-700 line-clamp-2">${diary.content}</p>
+                `;
+                diaryList.appendChild(diaryCard);
+            });
+        }
+
+        // 다크모드 토글
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark');
+            if (document.body.classList.contains('dark')) {
+                document.body.classList.add('bg-gray-900', 'text-white');
+                document.body.classList.remove('bg-purple-50');
+            } else {
+                document.body.classList.remove('bg-gray-900', 'text-white');
+                document.body.classList.add('bg-purple-50');
+            }
+        }
+
+        // 설정 보기
+        function showSettings() {
+            const action = prompt('설정 메뉴\n1. 비밀번호 변경\n2. 비밀번호 제거\n3. 데이터 내보내기\n4. 데이터 가져오기\n\n번호를 입력하세요:');
+            
+            switch(action) {
+                case '1':
+                    changePassword();
+                    break;
+                case '2':
+                    removePassword();
+                    break;
+                case '3':
+                    exportData();
+                    break;
+                case '4':
+                    importData();
+                    break;
+            }
+        }
+
+        // 비밀번호 변경
+        function changePassword() {
+            const newPassword = prompt('새 비밀번호를 입력하세요:');
+            if (newPassword) {
+                localStorage.setItem('diaryPassword', btoa(newPassword));
+                alert('비밀번호가 변경되었습니다!');
+            }
+        }
+
+        // 비밀번호 제거
+        function removePassword() {
+            if (confirm('비밀번호를 제거하시겠습니까?')) {
+                localStorage.removeItem('diaryPassword');
+                alert('비밀번호가 제거되었습니다!');
+            }
+        }
+
+        // 데이터 내보내기
+        function exportData() {
+            const dataStr = JSON.stringify(diaries, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `마음일기_${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        // 데이터 가져오기
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const imported = JSON.parse(e.target.result);
+                        if (confirm(`${imported.length}개의 일기를 가져오시겠습니까? 기존 데이터는 덮어씌워집니다.`)) {
+                            diaries = imported;
+                            localStorage.setItem('moodDiaries', JSON.stringify(diaries));
+                            alert('데이터를 성공적으로 가져왔습니다!');
+                            location.reload();
+                        }
+                    } catch (error) {
+                        alert('파일을 읽는 중 오류가 발생했습니다.');
+                    }
+                };
+                
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+    </script>
+</body>
+</html>
